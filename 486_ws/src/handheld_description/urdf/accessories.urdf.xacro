@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <!-- If enabled, generate the optional Microstrain 3DM-GX2/3 IMU payload. -->
+  <xacro:include filename="$(find ants_description)/urdf/accessories/microstrain_imu.urdf.xacro" />
+  <xacro:if value="$(optenv ANTS_MICROSTRAIN_IMU 0)">
+    <xacro:microstrain_imu prefix="$(optenv ANTS_MICROSTRAIN_IMU_PREFIX upgraded)"
+                           mount_link="$(optenv ANTS_MICROSTRAIN_IMU_MOUNT mid)_mount" >
+      <origin xyz="$(optenv ANTS_MICROSTRAIN_IMU_OFFSET 0 0 0)"
+              rpy="$(optenv ANTS_MICROSTRAIN_IMU_RPY 0 0 0)" />
+    </xacro:microstrain_imu>
+  </xacro:if>
+
+</robot>

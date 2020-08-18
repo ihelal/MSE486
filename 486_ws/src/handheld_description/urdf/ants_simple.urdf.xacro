@@ -1,0 +1,452 @@
+<?xml version="1.0"?>
+<robot name="ants" xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <xacro:include filename="$(find ants_description)/urdf/accessories/astra_camera.urdf.xacro"/>
+  <xacro:include filename="$(find velodyne_description)/urdf/VLP-16.urdf.xacro"/>
+  <xacro:include filename="$(find ants_description)/urdf/accessories/rplidar.urdf.xacro"/>
+  <xacro:include filename="$(find ants_description)/urdf/accessories/_d435.urdf.xacro"/>
+
+  <xacro:property name="PI" value="3.1415926535897931"/>
+
+<!--Variables needed for Measurements-->
+  <xacro:property name="_1_INCH" value="0.0254"/>
+  <xacro:property name="_05_INCH" value="0.0127"/>
+  <xacro:property name="CHASSIS_X_LIMIT" value="0.21"/>
+  <xacro:property name="CHASSIS_Y_LIMIT" value="0.228"/> <!---0.349066-->
+
+  <xacro:property name="wheel_radius" value="0.0508" />
+  <xacro:property name="wheel_width" value="0.0499" />
+
+  <xacro:property name="chassis_length" value="0.4572" />
+  <xacro:property name="chassis_width" value="0.4572" />
+  <xacro:property name="chassis_height" value="0.127" />
+
+  <xacro:property name="dummy_inertia" value="1e-09"/>
+
+<!--Toggle Sensors-->
+  <xacro:arg name="gps_enabled"     default="false" />
+  <xacro:arg name="imu_enabled"     default="true" />
+  <xacro:arg name="astra_enabled"   default="true" />
+  <xacro:arg name="intel_enabled"   default="true" />
+  <xacro:arg name="3d_laser_enable" default="false" />
+  <xacro:arg name="rp_enabled"      default="true" />
+
+  <xacro:arg name="imu_xyz" default="$(optenv IMU_XYZ 0 0 -0.0119)" />
+  <xacro:arg name="imu_rpy" default="$(optenv IMU_RPY 0 0 0)" /> 
+
+  <xacro:arg name="astra_xyz" default="$(optenv ASTRA_XYZ -0.259 -0.01053 0.025)" />
+  <xacro:arg name="astra_rpy" default="$(optenv ASTRA_RPY 0 0 ${PI})" /> 
+  
+  <xacro:arg name="intel_xyz" default="$(optenv INTEL_XYZ 0.26695 0 -0.0073)" />
+  <xacro:arg name="intel_rpy" default="$(optenv INTEL_RPY 0 -0.47368236 0)" /> 
+
+  <xacro:arg name="rp_xyz" default="$(optenv RPLIDAR_XYZ 0.21171 0 0.03891)" />
+  <xacro:arg name="rp_rpy" default="$(optenv RPLIDAR_RPY 0 0 0)" />
+
+  <xacro:arg name="robot_namespace" default="/" />
+  <xacro:arg name="gpu" default="true"/>
+
+  <xacro:macro name="box_inertia" params="m x y z">
+    <inertia ixx="${m*(y*y+z*z)/12}" ixy="0" ixz="0"
+             iyy="${m*(x*x+z*z)/12}" iyz="0"
+             izz="${m*(x*x+z*z)/12}" />
+  </xacro:macro>
+
+  <material name="dark_grey"><color rgba="0.2 0.2 0.2 1.0" /></material>
+  <material name="light_grey"><color rgba="0.4 0.4 0.4 1.0" /></material>
+  <material name="red">
+    <color rgba="0.8 0.0 0.0 1.0"/>
+  </material>
+  <material name="white"><color rgba="0.9 0.9 0.9 1.0" /></material>
+  <material name="green"><color rgba="0 1 0 1" /></material>
+  <material name="black"><color rgba="0.15 0.15 0.15 1.0" /></material>
+
+
+
+<!--3D Lidar -->
+  <xacro:if value="$(arg 3d_laser_enable)">
+    <VLP-16 parent="chassis_link" name="velodyne" topic="/cloud" hz="10" samples="440" gpu="$(arg gpu)">
+      <origin xyz="0 0 0.28" rpy="0 0 0" />
+    </VLP-16>
+  </xacro:if>
+
+  <!--GPS Marco-->
+  <xacro:macro name="novatel_smart6" params="prefix">
+    <link name="${prefix}_link">
+      <visual>
+        <origin xyz="0 0 0.3" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://ants_description/meshes/accessories/gps.dae"/>
+        </geometry>
+      </visual>
+    </link>
+  </xacro:macro>
+
+<!--wheel Marco-->
+  <xacro:macro name="wheel" params="prefix side *joint_pose">
+    <link name="${prefix}_${side}_wheel_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <!--<cylinder radius="${wheel_radius}" length="${wheel_width}"/>-->
+          <mesh filename="package://ants_description/meshes/mecanum_wheel.dae" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="${PI/2} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <origin xyz="0 0 0" rpy="${PI/2} 0 0"/>
+        <mass value="0.186"/>
+        <inertia
+          ixx="3.3212e-3" ixy="0" ixz="0"
+          iyy="6.6424e-3" iyz="0"
+          izz="3.3212e-3"/>
+      </inertial>
+    </link>
+
+    <joint name="${prefix}_${side}_wheel" type="continuous">
+      <parent link="chassis_link"/>
+      <child link="${prefix}_${side}_wheel_link" />
+      <xacro:insert_block name="joint_pose" />
+      <axis xyz="0 1 0" />
+    </joint>
+
+    <transmission name="${prefix}_wheel_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <joint name="${prefix}_${side}_wheel">
+        <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+      </joint>
+      <actuator name="${prefix}_${side}_actuator">
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+    </transmission>
+  </xacro:macro>
+
+  <!--right_rocker Marco-->
+  <xacro:macro name="right_rocker" params="side flip *joint_pose">
+
+    <link name="${side}_rocker_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://ants_description/meshes/1x5x35 c-channel.dae" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </visual>
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.135"/>
+        <inertia
+          ixx="3.3212e-3" ixy="2.20484e-6" ixz="-1.3145e-5"
+          iyy="3.3212e-3" iyz="1.8944e-3"
+          izz="3.3212e-3"/>
+      </inertial>
+    </link>
+
+    <link name="${side}_inner_rocker_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://ants_description/meshes/1x5x35 c-channel.dae" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="black" />
+      </visual>
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.135"/>
+        <inertia
+          ixx="3.3212e-3" ixy="2.20484e-6" ixz="-1.3145e-5"
+          iyy="3.3212e-3" iyz="1.8944e-3"
+          izz="3.3212e-3"/>
+      </inertial>
+    </link>
+
+    <joint name="${side}_inner_rocker" type="fixed">
+      <parent link="chassis_link"/>
+      <child link="${side}_inner_rocker_link" />
+      <origin xyz="0 -0.144 0" rpy="${PI/2} 0 0" />
+    </joint>
+
+    <joint name="${side}_rocker" type="fixed">
+      <parent link="chassis_link"/>
+      <child link="${side}_rocker_link" />
+      <xacro:insert_block name="joint_pose" />
+    </joint>
+
+    <xacro:wheel prefix="front" side="${side}">
+      <origin xyz="0.1778 0.0127 0.042" rpy="0 0 0" />
+    </xacro:wheel>
+    <xacro:wheel prefix="rear" side="${side}">
+      <origin xyz="-0.1778 0.0127 0.042" rpy="0 0 0" />
+    </xacro:wheel>
+
+  </xacro:macro>
+  <!--left_rocker Marco-->
+  <xacro:macro name="left_rocker" params="side flip *joint_pose">
+
+    <link name="${side}_rocker_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://ants_description/meshes/1x5x35 c-channel.dae" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </visual>
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.135"/>
+        <inertia
+          ixx="3.3212e-3" ixy="2.20484e-6" ixz="-1.3145e-5"
+          iyy="3.3212e-3" iyz="1.8944e-3"
+          izz="3.3212e-3"/>
+      </inertial>
+    </link>
+
+    <link name="${side}_outer_rocker_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://ants_description/meshes/1x5x35 c-channel.dae" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="black" />
+      </visual>
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.135"/>
+        <inertia
+          ixx="3.3212e-3" ixy="2.20484e-6" ixz="-1.3145e-5"
+          iyy="3.3212e-3" iyz="1.8944e-3"
+          izz="3.3212e-3"/>
+      </inertial>
+    </link>
+
+    <joint name="${side}_outer_rocker" type="fixed">
+      <parent link="chassis_link"/>
+      <child link="${side}_outer_rocker_link" />
+      <origin xyz="0 ${CHASSIS_Y_LIMIT} 0" rpy="${PI/2} 0 0" />
+    </joint>
+
+    <joint name="${side}_rocker" type="fixed">
+      <parent link="chassis_link"/>
+      <child link="${side}_rocker_link" />
+      <xacro:insert_block name="joint_pose" />
+    </joint>
+
+    <xacro:wheel prefix="front" side="${side}">
+      <origin xyz="0.1778 0.0127 0.042" rpy="0 0 0" />
+    </xacro:wheel>
+    <xacro:wheel prefix="rear" side="${side}">
+      <origin xyz="-0.1778 0.0127 0.042" rpy="0 0 0" />
+    </xacro:wheel>
+
+  </xacro:macro>
+
+  <xacro:macro name="_1x2x25_crossing_bar" params="location *joint_pose">
+    <link name="${location}_1x2x25_crossing_bar_link">
+        <visual>
+          <origin xyz="0 0 0" rpy="0 0 0" />
+          <geometry>
+            <mesh filename="package://ants_description/meshes/1x2x25 c-channel.dae" scale="0.001 0.001 0.001"/>
+          </geometry>
+        </visual>
+      </link>
+
+      <joint name="${location}_1x2x25_crossing_bar" type="fixed">
+        <parent link="chassis_link"/>
+        <child link="${location}_1x2x25_crossing_bar_link" />
+        <xacro:insert_block name="joint_pose" />
+      </joint>
+  </xacro:macro>
+
+  <xacro:macro name="_1x2x35_crossing_bar" params="location *joint_pose">
+    <link name="${location}_1x2x35_crossing_bar_link">
+        <visual>
+          <origin xyz="0 0 0" rpy="0 0 0" />
+          <geometry>
+            <mesh filename="package://ants_description/meshes/1x2x35 c-channel.dae" scale="0.00101 0.00101 0.00101"/>
+          </geometry>
+        </visual>
+      </link>
+
+      <joint name="${location}_1x2x35_crossing_bar" type="fixed">
+        <parent link="chassis_link"/>
+        <child link="${location}_1x2x35_crossing_bar_link" />
+        <xacro:insert_block name="joint_pose" />
+      </joint>
+  </xacro:macro>
+
+  <xacro:macro name="_1x5x35_crossing_bar" params="location *joint_pose">
+    <link name="${location}_1x5x35_crossing_bar_link">
+        <visual>
+          <origin xyz="0 0 0" rpy="0 0 0" />
+          <geometry>
+            <mesh filename="package://ants_description/meshes/1x5x35 c-channel.dae" scale="0.00101 0.00101 0.00101"/>
+          </geometry>
+        </visual>
+      </link>
+
+      <joint name="${location}_1x5x35_crossing_bar" type="fixed">
+        <parent link="chassis_link"/>
+        <child link="${location}_1x5x35_crossing_bar_link" />
+        <xacro:insert_block name="joint_pose" />
+      </joint>
+  </xacro:macro>
+
+  <xacro:macro name="battery" params="battery_count *joint_pose">
+    <link name="battery${battery_count}_link">
+        <visual>
+          <origin xyz="0 0 0" rpy="0 0 0" />
+          <geometry>
+            <box size="0.065024 0.15113 0.09398"/>
+          </geometry>
+        </visual>
+      </link>
+
+      <joint name="battery${battery_count}" type="fixed">
+        <parent link="chassis_link"/>
+        <child link="battery${battery_count}_link" />
+        <xacro:insert_block name="joint_pose" />
+      </joint>
+  </xacro:macro>
+
+  <xacro:macro name="pc" params="location *joint_pose">
+    <link name="${location}_pc_link">
+        <visual>
+          <origin xyz="0 0 0" rpy="0 0 0" />
+          <geometry>
+            <mesh filename="package://ants_description/meshes/pc.dae" scale="1 1 1"/>
+          </geometry>
+        </visual>
+      </link>
+
+      <joint name="${location}_pc" type="fixed">
+        <parent link="chassis_link"/>
+        <child link="${location}_pc_link" />
+        <xacro:insert_block name="joint_pose" />
+      </joint>
+  </xacro:macro>
+
+  <link name="base_link"></link>
+
+  <joint name="base_link_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="base_link"/>
+    <child link="chassis_link" />
+  </joint>
+
+  <link name="chassis_link">
+<!--<visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+      <material name="green"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0"/>
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+    </collision>-->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="10.0"/>
+      <inertia
+        ixx="3.6412e-3" ixy="2.20484e-6" ixz="-1.3145e-5"
+        iyy="3.6412e-3" iyz="1.8944e-3"
+        izz="3.6412e-3"/>
+    </inertial>
+
+  </link>
+
+  <xacro:wheel prefix="front" side="right">
+    <origin xyz="0.18415 -0.17825 -0.0127" rpy="0 0 0" />
+  </xacro:wheel>
+
+  <xacro:wheel prefix="front" side="left">
+    <origin xyz="0.18415 0.17825 -0.0127" rpy="0 0 0" />
+  </xacro:wheel>
+  
+  <xacro:wheel prefix="rear" side="right">
+    <origin xyz="-0.18415 -0.17825 -0.0127" rpy="0 0 0" />
+  </xacro:wheel>
+
+  <xacro:wheel prefix="rear" side="left">
+    <origin xyz="-0.18415 0.17825 -0.0127" rpy="0 0 0" />
+  </xacro:wheel>
+
+
+  <!--GPS-->
+  <xacro:if value="$(arg gps_enabled)"> -->
+    <link name="navsat_link">
+        <visual>
+          <origin xyz="0 0 0" rpy="0 0 0" />
+          <geometry>
+            <mesh filename="package://ants_description/meshes/accessories/gps.dae"/>
+          </geometry>
+        </visual>
+    </link>
+
+    <joint name="navsat_joint" type="fixed">
+        <origin xyz="-0.3 0 0.4" rpy="0 0 0" />
+        <parent link="chassis_link" />
+        <child  link="navsat_link" />
+    </joint>
+  </xacro:if>
+
+<!--IMU -->
+  <xacro:if value="$(arg imu_enabled)">
+    <link name="base_imu_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <box size="0.052 0.052 0.027"/>
+        </geometry>
+      </visual>
+      <inertial>
+        <mass value="0.001"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="${dummy_inertia}" ixy="0.0" ixz="0.0" iyy="${dummy_inertia}" iyz="0.0" izz="${dummy_inertia}"/>
+      </inertial>
+    </link>
+
+    <joint name="imu_joint" type="fixed">
+      <parent link="chassis_link" />
+      <child link="base_imu_link" />
+      <origin xyz="$(arg imu_xyz)" rpy="$(arg imu_rpy)"/>
+    </joint>
+ </xacro:if>
+
+  <!--2D Lidar -->
+  <xacro:if value="$(arg rp_enabled)">
+    <xacro:rp_lidar parent_frame="chassis_link" frame="base_laser" topic="scan" robot_namespace="$(arg robot_namespace)">
+        <origin xyz="$(arg rp_xyz)" rpy="$(arg rp_rpy)" />
+    </xacro:rp_lidar>
+  </xacro:if>
+
+<!--Astra Camera -->
+  <xacro:if value="$(arg astra_enabled)">
+    <xacro:sensor_astra name="astra" parent="chassis_link">
+      <origin xyz="$(arg astra_xyz)" rpy="$(arg astra_rpy)" />
+    </xacro:sensor_astra>
+ </xacro:if>
+
+<!--Intel Camera -->
+  <xacro:if value="$(arg intel_enabled)">
+    <xacro:sensor_d435 name="intel" parent="chassis_link">
+      <origin xyz="$(arg intel_xyz)" rpy="$(arg intel_rpy)" />
+    </xacro:sensor_d435>
+  </xacro:if>
+
+
+  <!-- Bring in simulation data for Gazebo. -->
+  <xacro:include filename="$(find ants_description)/urdf/ants.gazebo" />
+
+  <xacro:include filename="$(find ants_description)/urdf/accessories.urdf.xacro" />
+
+  <!-- Optional custom includes. -->
+  <xacro:include filename="$(optenv ANTS_URDF_EXTRAS empty.urdf)" />
+
+</robot>

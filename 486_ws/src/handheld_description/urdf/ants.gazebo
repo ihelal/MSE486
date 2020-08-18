@@ -1,0 +1,97 @@
+<?xml version="1.0"?>
+<robot>
+<!---->
+  <gazebo>
+    
+    <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+      <robotNamespace>/</robotNamespace>
+      <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType>
+      <legacyModeNS>true</legacyModeNS>
+    </plugin>
+
+    <plugin name="ants_ros_force_based_move" filename="libants_ros_force_based_move.so">
+      <robotNamespace>/</robotNamespace>
+      <commandTopic>cmd_vel</commandTopic>
+      <odometryTopic>odom</odometryTopic>
+      <odometryFrame>odom</odometryFrame>
+      <odometryRate>25.0</odometryRate>
+      <robotBaseFrame>base_link</robotBaseFrame>
+      <cmdVelTimeOut>0.25</cmdVelTimeOut>
+      <!-- Don't publish a transform: the controller does it.-->
+      <publishOdometryTf>0</publishOdometryTf>
+      
+      <yaw_velocity_p_gain>25.0</yaw_velocity_p_gain>
+      <x_velocity_p_gain>55.0</x_velocity_p_gain>
+      <y_velocity_p_gain>55.0</y_velocity_p_gain>
+    </plugin>
+
+    <plugin name="imu_controller" filename="libhector_gazebo_ros_imu.so">
+      <robotNamespace>/</robotNamespace>
+      <updateRate>50.0</updateRate>
+      <bodyName>base_imu_link</bodyName>
+      <topicName>imu/data</topicName>
+      <accelDrift>0.005 0.005 0.005</accelDrift>
+      <accelGaussianNoise>0.005 0.005 0.005</accelGaussianNoise>
+      <rateDrift>0.00005 0.00005 0.00005</rateDrift>
+      <rateGaussianNoise>0.00005 0.00005 0.00005</rateGaussianNoise>
+      <headingDrift>0.005</headingDrift>
+      <headingGaussianNoise>0.005</headingGaussianNoise>
+    </plugin>
+
+  <gazebo>
+      
+    <plugin name="gps_controller" filename="libhector_gazebo_ros_gps.so">
+      <robotNamespace>/</robotNamespace>
+      <updateRate>50</updateRate>
+      <bodyName>navsat_link</bodyName>
+      <frameId>navsat_link</frameId>
+      <topicName>navsat/fix</topicName>
+      <velocityTopicName>navsat/vel</velocityTopicName>
+      <referenceLatitude>49.097745</referenceLatitude>
+      <referenceLongitude>-122.260090</referenceLongitude>
+      <referenceHeading>0</referenceHeading>
+      <referenceAltitude>0</referenceAltitude>
+      <drift>0.0001 0.0001 0.0001</drift>
+    </plugin>
+  </gazebo>-->
+
+  </gazebo>
+
+  <!-- All static links get collapsed down to base_link in Gazebo, so that's
+       the one to apply the colour to (in Gazebo 5+). -->
+  <gazebo reference="base_link">
+    <material>Gazebo/DarkGrey</material>
+    <gravity>true</gravity>
+  </gazebo>
+
+
+  <!-- Wheel friction to zero, as movement is handled by applying forces at
+       the body level. -->
+  <gazebo reference="front_left_wheel_link">
+    <mu1>0.0</mu1>
+    <mu2>0.0</mu2>
+  </gazebo>
+
+  <gazebo reference="front_right_wheel_link">
+    <mu1>0.0</mu1>
+    <mu2>0.0</mu2>
+  </gazebo>
+
+  <gazebo reference="rear_left_wheel_link">
+    <mu1>0.0</mu1>
+    <mu2>0.0</mu2>
+  </gazebo>
+
+  <gazebo reference="rear_right_wheel_link">
+    <mu1>0.0</mu1>
+    <mu2>0.0</mu2>
+  </gazebo>
+
+  <gazebo reference="battery_front_link">
+    <material>Gazebo/Black</material>
+  </gazebo>
+
+  <gazebo reference="battery_rear_link">
+    <material>Gazebo/Black</material>
+  </gazebo>
+</robot>

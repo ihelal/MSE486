@@ -1,0 +1,8 @@
+prefix=/home/hima/486_ws/devel
+
+Name: vo_description
+Description: Description of vo_description
+Version: 0.2.2
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

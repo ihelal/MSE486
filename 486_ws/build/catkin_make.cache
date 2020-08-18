@@ -1,0 +1,2 @@
+astra_camera:handheld_description
+-DCATKIN_DEVEL_PREFIX=/home/hima/486_ws/devel -DCMAKE_INSTALL_PREFIX=/home/hima/486_ws/install -G Unix Makefiles

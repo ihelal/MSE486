@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+<xacro:property name="PI" value="3.1415926535897931"/>
+
+  <xacro:macro name="rp_lidar" params="parent_frame:=chassis_link frame:=laser topic:=scan sample_size:=720 update_rate:=15
+               min_angle:=${-PI} max_angle:=${PI} min_range:=0.15 max_range:=12.0 robot_namespace:=/ *joint_pose"  >
+    <link name="${frame}">
+      <visual>
+        <origin xyz="0 0 0" rpy="${PI/2} 0 ${PI-0.4}" />
+        <geometry>
+          <!-- Origin of this mesh is the focal point of the LIDAR. -->
+          <sphere radius="0.038"/>
+         <!-- <mesh filename="package://ants_description/meshes/accessories/rp_lidar.dae" scale="0.001 0.001 0.001"/>-->
+        </geometry>
+      </visual>
+    </link>
+
+    <joint name="laser_joint" type="fixed">
+      <xacro:insert_block name="joint_pose" />
+      <parent link="${parent_frame}" />
+      <child link="${frame}" />
+    </joint>
+
+    <gazebo reference="${frame}">
+      <turnGravityOff>true</turnGravityOff>
+      <sensor type="ray" name="${frame}">
+        <pose>0 0 0 0 0 0</pose>
+        <visualize>false</visualize>
+        <update_rate>${update_rate}</update_rate>
+        <ray>
+          <scan>
+            <horizontal>
+              <samples>${sample_size}</samples>
+              <resolution>1</resolution>
+              <min_angle>${min_angle}</min_angle>
+              <max_angle>${max_angle}</max_angle>
+            </horizontal>
+          </scan>
+          <range>
+            <min>${min_range}</min>
+            <max>${max_range}</max>
+            <resolution>0.01</resolution>
+          </range>
+          <noise>
+            <type>gaussian</type>
+            <mean>0.0</mean>
+            <stddev>0.001</stddev>
+          </noise>
+        </ray>
+        <plugin name="gazebo_ros_laser" filename="libgazebo_ros_laser.so">
+          <topicName>${topic}</topicName>
+          <frameName>${frame}</frameName>
+          <robotNamespace>${robot_namespace}</robotNamespace>
+        </plugin>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+</robot>

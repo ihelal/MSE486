@@ -1,0 +1,95 @@
+<?xml version="1.0"?>
+<robot name="vo_setup" xmlns:xacro="http://ros.org/wiki/xacro">
+
+
+  <xacro:property name="PI" value="3.1415926535897931"/>
+
+<!--Variables needed for Measurements-->
+  <xacro:property name="_1_INCH" value="0.0254"/>
+  <xacro:property name="_05_INCH" value="0.0127"/>
+  <xacro:property name="CHASSIS_X_LIMIT" value="0.21"/>
+  <xacro:property name="CHASSIS_Y_LIMIT" value="0.228"/> <!---0.349066-->
+
+  <xacro:property name="wheel_radius" value="0.0508" />
+  <xacro:property name="wheel_width" value="0.0499" />
+
+  <xacro:property name="chassis_length" value="0.4572" />
+  <xacro:property name="chassis_width" value="0.4572" />
+  <xacro:property name="chassis_height" value="0.127" />
+
+  <xacro:property name="dummy_inertia" value="1e-09"/>
+
+<!--Toggle Sensors-->
+  <xacro:arg name="gps_enabled"     default="false" />
+  <xacro:arg name="imu_enabled"     default="true" />
+  <xacro:arg name="astra_enabled"   default="true" />
+  <xacro:arg name="intel_enabled"   default="true" />
+  <xacro:arg name="3d_laser_enable" default="false" />
+  <xacro:arg name="rp_enabled"      default="true" />
+
+  <xacro:arg name="imu_xyz" default="$(optenv IMU_XYZ 0 0 -0.0119)" />
+  <xacro:arg name="imu_rpy" default="$(optenv IMU_RPY 0 0 0)" /> 
+
+  <xacro:arg name="astra_xyz" default="$(optenv ASTRA_XYZ -0.259 -0.01053 0.025)" />
+  <xacro:arg name="astra_rpy" default="$(optenv ASTRA_RPY 0 0 ${PI})" /> 
+  
+  <xacro:arg name="intel_xyz" default="$(optenv INTEL_XYZ 0.26695 0 -0.0073)" />
+  <xacro:arg name="intel_rpy" default="$(optenv INTEL_RPY 0 -0.47368236 0)" /> 
+
+  <xacro:arg name="rp_xyz" default="$(optenv RPLIDAR_XYZ 0.21171 0 0.03891)" />
+  <xacro:arg name="rp_rpy" default="$(optenv RPLIDAR_RPY 0 0 0)" />
+
+  <xacro:arg name="robot_namespace" default="/" />
+  <xacro:arg name="gpu" default="true"/>
+
+  <xacro:macro name="box_inertia" params="m x y z">
+    <inertia ixx="${m*(y*y+z*z)/12}" ixy="0" ixz="0"
+             iyy="${m*(x*x+z*z)/12}" iyz="0"
+             izz="${m*(x*x+z*z)/12}" />
+  </xacro:macro>
+
+  <material name="dark_grey"><color rgba="0.2 0.2 0.2 1.0" /></material>
+  <material name="light_grey"><color rgba="0.4 0.4 0.4 1.0" /></material>
+  <material name="red">
+    <color rgba="0.8 0.0 0.0 1.0"/>
+  </material>
+  <material name="white"><color rgba="0.9 0.9 0.9 1.0" /></material>
+  <material name="green"><color rgba="0 1 0 1" /></material>
+  <material name="black"><color rgba="0.15 0.15 0.15 1.0" /></material>
+
+
+
+<link name="base_link"></link>
+<link name="d435_link"></link>
+<link name="astra_link"></link>
+<link name="t265_link"></link>
+<link name="t265_pose_frame"></link>
+
+  <joint name="t265_pose_frame_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="t265_pose_frame"/>
+    <child link="base_link" />
+  </joint>
+
+  <joint name="t265_link_joint" type="fixed">
+    <origin xyz="0 0 0.05365" rpy="0 0 0" />
+    <parent link="base_link"/>
+    <child link="t265_link" />
+  </joint>
+
+  <joint name="d435_link_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="base_link"/>
+    <child link="d435_link" />
+  </joint>
+
+
+  <joint name="astra_link_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="base_link"/>
+    <child link="astra_link" />
+  </joint>
+
+
+
+</robot>
